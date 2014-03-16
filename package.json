@@ -1,0 +1,10 @@
+{
+    "name": "SlateCrawler",
+    "version": "0.0.1",
+    "author": "Elizabeth <liz@elizzybeth.com>",
+    "dependencies" : {
+        "crawler"   :   "*", 
+        "mongodb"   :   "*"
+    }
+}
+    

@@ -1,0 +1,17 @@
+URL
+author
+title
+section
+pubDate
+retDate
+links
+paragraphs
+
+mean, median, mode, range, std deviation
+
+average number of links per paragraph
+average number of links per word
+average anchor text string length
+average number of words per anchor
+
+do authors have similar/different average 
