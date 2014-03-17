@@ -9,6 +9,11 @@ var setupCrawler = function(collection){
         
         // This will be called for each crawled page
         "callback":function(error,result,$) {
+            if(error) {
+                console.log("Error getting page.");
+                console.dir(error);
+                return;    
+            }
             var rx = /^http:\/\/www.slate.com\/full_slate/;
             
             if(rx.test(result.request.uri.href)) {
@@ -26,14 +31,22 @@ var setupCrawler = function(collection){
                     });                  
                 });
                 c.queue($(".load-more-button a")[0].href);
+                return;
             } else {
                 console.log("Loaded article: " + result.request.uri.href);            
             }
+            var singlePage = $(".single-page a");
+            if (singlePage.length){
+                console.log("Switching to single page: " + singlePage[0].href);
+                c.queue(singlePage[0].href);
+                return;
+            }
+            
             var articleData = {
                 URL: result.request.uri.href,
-                author: $("#main_byline > a[rel='author']").text(),
-                title: $(".article-header .hed").text(),
-                section: $(".print-only + .prop-name > a").text(),
+                author: $("#main_byline > a[rel='author']").text().trim(),
+                title: $(".article-header .hed").text().trim(),
+                section: $(".print-only + .prop-name > a").text().trim(),
                 pubDate: new Date($(".pub-date").text()),
                 retDate: new Date,
                 links:[],
@@ -41,7 +54,7 @@ var setupCrawler = function(collection){
             };
         
             $(".text.parbase.section > p").each(function(index,p) {
-                articleData.paragraphs.push($(p).text());
+                articleData.paragraphs.push($(p).text().trim());
             });
             // Join array elements into a string. 
             articleData.fullText = articleData.paragraphs.join(" ");
@@ -60,12 +73,13 @@ var setupCrawler = function(collection){
             
             // $ is a jQuery instance scoped to the server-side DOM of the page
             $(".body a").each(function(index,a) {
-                var text = $(a).text();
+                var text = $(a).text().trim();
                 if(text !== "More..." && text !== "Join In" && text !== "" && text !== undefined){
                     articleData.links.push({
                         text: text, 
                         href: a.href,
-                        length: text.length
+                        length: text.length,
+                        wordCount: text.split(" ").length
                     });
                 }
             });
@@ -79,7 +93,7 @@ var setupCrawler = function(collection){
             });
         }
     });
-    c.queue("http://www.slate.com/full_slate.60.html");
+    c.queue("http://www.slate.com/full_slate.html");
 //    c.queue("http://www.slate.com/articles/double_x/science/2014/03/breast_cancer_patients_should_talk_about_their_sexual_health_just_as_much.html");
 //    c.queue("http://www.slate.com/articles/news_and_politics/foreigners/2014/01/pussy_riot_members_after_release_they_re_launching_a_prisoners_rights_movement.single.html");
 };
@@ -91,7 +105,7 @@ MongoClient.connect("mongodb://localhost:27017/slate", function(err, db) {
         console.dir(err);
         process.kill();
     }
-    db.createCollection('articles', function(err, collection) {
+    db.createCollection('articles2', function(err, collection) {
         if(err) {
             console.log("Couldn't create articles collection.");
             console.dir(err);
