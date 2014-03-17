@@ -18,9 +18,14 @@ var fixData = function(articles) {
             }
             
             article.trimmed = true;
-                
+            
+            var shouldRemove = false;    
             if(rx.test(article.URL)) {
-                console.log(article.URL);
+                shouldRemove = true;
+                console.log("Full Slate article detected: " + article.URL);
+            }
+            
+            if(shouldRemove) {
                 articles.remove({_id: article._id}, function(err){
                     if(err){
                         console.log("Couldn't remove.");
@@ -29,6 +34,8 @@ var fixData = function(articles) {
                     }
                 });
             }
+            
+            // Replace bloated strings with trimmed versions of themselves
             
             // Trim title
             var trimmedTitle = article.title.trim();
@@ -61,6 +68,10 @@ var fixData = function(articles) {
             
             // Trim links
             var i;
+            var newLinks = [];
+            article.totalLinkWords = 0;
+            article.totalLinkCharacters = 0;
+            article.totalLinksToSlate = 0;
             for(i = 0; i < article.links.length; i++) {
                 var link = article.links[i];
                 var trimmedLink = link.text.trim();
@@ -70,10 +81,38 @@ var fixData = function(articles) {
                 }
                 link.length = link.text.length;
                 link.wordCount = link.text.split(" ").length;
-                article.links[i] = link;
+                
+                // Check if the link contains Slate, SlateGroup, Graham Holdings
+                if (link.href.indexOf("slate.com") !== -1) {
+                    if(!link.linksToSlate){
+                        console.log("Found a link to another Slate article: " + article.URL + " > " + link.href);
+                    }
+                    link.linksToSlate = 1;
+                } else {
+                    link.linksToSlate = 0;
+                }
+                
+                
+                // Remove all links where the text is empty (to deal with images)
+                if (link.length == 0) {
+                    console.log("Empty link DETECTED! " + article.URL);
+                } else if (link.href.indexOf(article.URL) == 0) {
+                    // Remove all links that are to the same page (diff sections) - with regex
+                    console.log("Internal link DETECTED! " + link.href);
+                } else {    
+                    newLinks[newLinks.length] = link;
+                    article.totalLinkWords += link.wordCount;
+                    article.totalLinkCharacters += link.length;
+                    article.totalLinksToSlate += link.linksToSlate;
+                }
             }
+            if(article.links.length != newLinks.length){
+                console.log("Removed " + (article.links.length - newLinks.length) + " links.");
+            }
+            article.links = newLinks;
             
             // Trim paragraphs
+            var newParagraphs = [];
             for(i = 0; i < article.paragraphs.length; i++) {
                 var paragraph = article.paragraphs[i];
                 var trimmedParagraph = paragraph.trim();
@@ -85,38 +124,38 @@ var fixData = function(articles) {
             }
             
             
+            
             article.linksPerParargraph = article.links.length / article.paragraphs.length;
             
             article.wordCount = article.fullText.split(" ").length;
+            
+            article.averageAnchorTextWordCount = article.totalLinkWords / article.links.length;
+            
+            article.averageAnchorTextCharacterCount = article.totalLinkCharacters / article.links.length;
+            
+            article.linksPerWord = article.totalLinkWords / article.wordCount;
                 
-            articles.update({_id: article._id}, article, function(err, article) {
+            articles.update({_id: article._id}, article, {w: 1}, function(err, article) {
                 if(err){
                     console.log("Couldn't trim: ", article.URL);
                     console.dir(err);
                     process.kill();
                 }
+                articles.remove({URL: article.URL, _id: {$ne: article._id}}, function(err, articlesDeleted){
+                    if(articlesDeleted){
+                        console.log("Removing duplicate article: " + article.URL);
+                    }
+                    if(err){
+                        console.log("Couldn't remove duplicate article: " + article.URL);
+                        console.dir(err);
+                        process.kill();
+                    }
+                    fixArticle(articles);
+                });
             });  
-            fixArticle(articles);
         });
     };    
-    // Read the data string by string
     
-    // Replace bloated strings with trimmed versions of themselves
-        // Run .trim on all strings that I want to trim    
-    
-    // Remove all links that are to the same page (diff sections) - with regex
-        // Figure out if it starts with URL of same article, has # and other stuff
-    
-    // Remove all links where the text is empty (to deal with images)
-    
-    // After we do all this, will want to recalculate all the link lengths
-    
-    // Start recording: 
-            //words per link
-            //links per paragraph
-            //avg anchor text str length
-            //word count on link text
-            //avg words/chars per link
             
             //author stuff:
                 //parse list when multiple authors
@@ -124,8 +163,7 @@ var fixData = function(articles) {
             
             //for each link: does it point back to... test each of the sites (regex)
                 //links to: Slate (true/false), Slate Group (t/f), Graham Holdings(t/f)
-            //self-citation: how often do authors link old articles of their own?
-    
+                            
     articles.update({trimmed: true}, {$unset: {trimmed:''}}, {multi: true}, function(err) {
         if(err){
             console.log("Couldn't untrim.");

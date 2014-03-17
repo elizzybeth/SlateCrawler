@@ -7,11 +7,82 @@ retDate
 links
 paragraphs
 
+length in words
+
 mean, median, mode, range, std deviation
+    average number of links per paragraph
+    average number of links per word
+    average anchor text string length
+    average number of words per anchor
 
-average number of links per paragraph
-average number of links per word
-average anchor text string length
-average number of words per anchor
+do authors have similar/different average anchor text str lengths, average links per article?
+have anchor text str lengths, frequency of links, etc. changed over time? (may not be able to figure out until collect more)
 
-do authors have similar/different average 
+with what frequency links point back to Slate articles and/or other articles published by the same owner:
+            Does it link to something on Slate.com?
+			Does it link to something owned by The Slate Group?
+				http://www.foreignpolicy.com/
+				http://www.theroot.com/
+			Does it link to something owned by Graham Holdings Company?
+				KPRC-TV	http://www.click2houston.com/
+				WDIV-TV http://www.clickondetroit.com/
+
+{
+{
+    "URL": "",
+    "_id": ObjectId(""),
+    "author": "",
+    "fullText": "",
+    "links": [{
+        "text": "",
+        "href": "",
+        "length": 78,
+        "wordCount": 12
+    }],
+    "paragraphs": ["", ""],
+    "pubDate": ISODate("2014-03-12T18:08:00Z"),
+    "retDate": ISODate("2014-03-13T07:20:33.175Z"),
+    "section": "",
+    "title": "",
+    "wordCount": 563,
+    "trimmed": true
+}
+
+//FUTURE WORK: 
+//self-citation: how often do authors link old articles of their own?
+                    // if a link points to slate article
+                    // then check if author field for linked article is the same as author of current article
+                    // then set self-citation to true
+    
+
+    URL: result.request.uri.href,
+    author: $("#main_byline > a[rel='author']").text(),
+    title: $(".article-header .hed").text(),
+    section: $(".print-only + .prop-name > a").text(),
+    pubDate: new Date($(".pub-date").text()),
+    retDate: new Date,
+    links:[], // list of objects
+    paragraphs:[] // list of strings
+};
+
+{
+    text: text, 
+    href: a.href,
+    length: text.length
+});
+
+
+db.articlesCopy1.aggregate([
+    { $group: { _id: "URL", total: { $sum: 1 } } },
+    { $match: { total: {$gt: 1}}}
+])
+
+
+ {
+                   key: { URL: 1 },
+                   cond: { total: {$gt: 1} },
+                   reduce: function ( curr, result ) {
+                               result.total ++ ;
+                           },
+                   initial: { total : 0 }
+                } )
