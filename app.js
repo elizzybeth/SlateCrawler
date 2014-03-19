@@ -96,7 +96,7 @@ var setupCrawler = function(collection){
             });
         }
     });
-    c.queue("http://www.slate.com/full_slate.105.html");
+    c.queue("http://www.slate.com/full_slate.html");
 //    c.queue("http://www.slate.com/articles/double_x/science/2014/03/breast_cancer_patients_should_talk_about_their_sexual_health_just_as_much.html");
 //    c.queue("http://www.slate.com/articles/news_and_politics/foreigners/2014/01/pussy_riot_members_after_release_they_re_launching_a_prisoners_rights_movement.single.html");
 };

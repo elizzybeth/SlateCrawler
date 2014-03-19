@@ -72,6 +72,9 @@ var fixData = function(articles) {
             article.totalLinkWords = 0;
             article.totalLinkCharacters = 0;
             article.totalLinksToSlate = 0;
+            article.totalLinksToForeignPolicy = 0;
+            article.totalLinksToTheRoot = 0;
+            
             for(i = 0; i < article.links.length; i++) {
                 var link = article.links[i];
                 var trimmedLink = link.text.trim();
@@ -83,7 +86,7 @@ var fixData = function(articles) {
                 link.wordCount = link.text.split(" ").length;
                 
                 // Check if the link contains Slate, SlateGroup, Graham Holdings
-                if (link.href.indexOf("slate.com") !== -1) {
+                if (link.href.indexOf("www.slate.com") !== -1) {
                     if(!link.linksToSlate){
                         console.log("Found a link to another Slate article: " + article.URL + " > " + link.href);
                     }
@@ -91,6 +94,29 @@ var fixData = function(articles) {
                 } else {
                     link.linksToSlate = 0;
                 }
+                
+                //SlateGroup
+                if(link.href.indexOf("www.foreignpolicy.com") !== -1) {
+                    if(!link.linksToForeignPolicy){
+                        console.log("Found a link to a Foreign Policy article: " + article.URL + " > " + link.href);
+                    }
+                    link.linksToForeignPolicy = 1;
+                } else {
+                    link.linksToForeignPolicy = 0;
+                }
+                
+                if(link.href.indexOf("www.theroot.com") !== -1) {
+                    if(!link.linksToTheRoot){
+                        console.log("Found a link to a The Root article: " + article.URL + " > " + link.href);
+                    }
+                    link.linksToTheRoot = 1;
+                } else {
+                    link.linksToTheRoot = 0;
+                }
+                
+                article.totalLinksToSlateGroup = article.totalLinksToForeignPolicy + article.totalLinksToTheRoot;
+                
+
                 
                 
                 // Remove all links where the text is empty (to deal with images)
@@ -134,6 +160,33 @@ var fixData = function(articles) {
             article.averageAnchorTextCharacterCount = article.totalLinkCharacters / article.links.length;
             
             article.linksPerWord = article.totalLinkWords / article.wordCount;
+            
+            // Fix multiple author problem
+            
+            // loop through the string
+            // looking for regex, using search
+            // using substring, read up to index found in search + 1
+            // put string into authors[], put remainder into remainder variable
+            // loop until remainder is empty
+            
+            var remainder = article.author;
+            article.authors = [];
+            var searchIndex = 0;
+            
+            while (remainder != "") {
+                searchIndex = remainder.search (/[a-z][a-z][A-Z]/);
+                if(searchIndex == -1){
+                    article.authors[article.authors.length] = remainder;
+                    break;
+                }
+                searchIndex += 2; // regex search returns index two chars before I want to break
+                article.authors[article.authors.length] = remainder.substring(0, searchIndex);
+                remainder = remainder.substring(searchIndex);
+            }
+            if(article.authors.length > 1){
+                console.log("Split an author string: " + article.authors);
+            }
+            
                 
             articles.update({_id: article._id}, article, {w: 1}, function(err, article) {
                 if(err){
@@ -155,15 +208,7 @@ var fixData = function(articles) {
             });  
         });
     };    
-    
-            
-            //author stuff:
-                //parse list when multiple authors
-
-            
-            //for each link: does it point back to... test each of the sites (regex)
-                //links to: Slate (true/false), Slate Group (t/f), Graham Holdings(t/f)
-                            
+  
     articles.update({trimmed: true}, {$unset: {trimmed:''}}, {multi: true}, function(err) {
         if(err){
             console.log("Couldn't untrim.");
@@ -181,7 +226,7 @@ MongoClient.connect("mongodb://localhost:27017/slate", function(err, db) {
         console.dir(err);
         process.kill();
     }
-    db.createCollection('articlesCopy1', function(err, articles) {
+    db.createCollection('articlesCopy2', function(err, articles) {
         if(err) {
             console.log("Couldn't create articles collection.");
             console.dir(err);
